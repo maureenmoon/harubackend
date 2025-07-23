@@ -1,12 +1,15 @@
 package com.study.spring.domain.meal.controller;
 
 import com.study.spring.domain.meal.dto.MealDto;
+import com.study.spring.domain.meal.entity.Meal;
 import com.study.spring.domain.meal.entity.MealType;
 import com.study.spring.domain.meal.service.MealService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/meals")
@@ -49,6 +52,13 @@ public class MealController {
         return ResponseEntity.ok(mealService.getMealsByMemberIdAndMealType(memberId, mealType));
     }
 
+    // updatedAt 날짜로 식사 기록 조회
+    @GetMapping("/updated-date")
+    public ResponseEntity<List<MealDto.Response>> getMealsByUpdatedDate(@RequestParam("date") String dateStr) {
+        LocalDate date = LocalDate.parse(dateStr);
+        return ResponseEntity.ok(mealService.getMealsByUpdatedDate(date));
+    }
+
     // 식사 기록 수정
     @PutMapping("/{id}")
     public ResponseEntity<MealDto.Response> updateMeal(
@@ -61,7 +71,8 @@ public class MealController {
     @PatchMapping("/{id}/image")
     public ResponseEntity<Void> updateMealImage(
             @PathVariable("id") Long id,
-            @RequestParam("imageUrl") String imageUrl) {
+            @RequestBody Map<String, String> body) {
+        String imageUrl = body.get("imageUrl");
         mealService.updateMealImage(id, imageUrl);
         return ResponseEntity.noContent().build();
     }
@@ -72,4 +83,10 @@ public class MealController {
         mealService.deleteMeal(id);
         return ResponseEntity.noContent().build();
     }
+
+    // 식사 이미지 저장
+    // @PostMapping("/{id}/")
+    // public void testCreate(@ModelAttribute MealDto.Request request) {
+    //     mealService.uploadMealImage(request);
+    // }
 } 

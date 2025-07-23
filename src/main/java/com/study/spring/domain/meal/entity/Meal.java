@@ -41,6 +41,19 @@ public class Meal {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    public void setMealType(MealType mealType) {
+        this.mealType = mealType;
+    }
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+    public void setMemo(String memo) {
+        this.memo = memo;
+    }
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

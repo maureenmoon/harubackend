@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
@@ -95,19 +96,36 @@ public class MealService {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "식사 기록을 찾을 수 없습니다."));
 
-        // Meal 정보 업데이트
-        Meal updatedMeal = Meal.builder()
-                .id(meal.getId())
-                .member(meal.getMember())
-                .mealType(request.getMealType())
-                .imageUrl(request.getImageUrl())
-                .memo(request.getMemo())
-                .foods(meal.getFoods())  // 기존 음식 리스트 유지
-                .createdAt(meal.getCreatedAt())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        // 1. 기존 foods 모두 삭제
+        meal.getFoods().clear();
+        foodRepository.deleteAllByMealId(meal.getId()); // FoodRepository에 해당 메서드 필요
 
-        Meal savedMeal = mealRepository.save(updatedMeal);
+        // 2. 요청의 foods로 새 Food 리스트 생성 및 할당
+        List<Food> newFoods = new ArrayList<>();
+        if (request.getFoods() != null) {
+            for (MealDto.FoodRequest foodReq : request.getFoods()) {
+                Food food = Food.builder()
+                        .foodName(foodReq.getFoodName())
+                        .calories(foodReq.getCalories())
+                        .carbohydrate(foodReq.getCarbohydrate())
+                        .protein(foodReq.getProtein())
+                        .fat(foodReq.getFat())
+                        .sodium(foodReq.getSodium())
+                        .fiber(foodReq.getFiber())
+                        .meal(meal)
+                        .build();
+                newFoods.add(food);
+            }
+        }
+        meal.getFoods().addAll(newFoods);
+
+        // 3. Meal의 나머지 필드 업데이트
+        meal.setMealType(request.getMealType());
+        meal.setImageUrl(request.getImageUrl());
+        meal.setMemo(request.getMemo());
+        meal.setUpdatedAt(request.getUpdatedAt() != null ? request.getUpdatedAt().atStartOfDay() : LocalDate.now().atStartOfDay());
+
+        Meal savedMeal = mealRepository.save(meal);
         return MealDto.Response.from(savedMeal);
     }
 
@@ -148,5 +166,17 @@ public class MealService {
                 .build();
 
         mealRepository.save(updatedMeal);
+    }
+
+    public List<MealDto.Response> getMealsByUpdatedDate(LocalDate date) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay().minusNanos(1);
+        return mealRepository.findAll().stream()
+                .filter(meal -> {
+                    LocalDateTime updatedAt = meal.getUpdatedAt();
+                    return updatedAt != null && !updatedAt.isBefore(start) && !updatedAt.isAfter(end);
+                })
+                .map(MealDto.Response::from)
+                .collect(Collectors.toList());
     }
 } 
