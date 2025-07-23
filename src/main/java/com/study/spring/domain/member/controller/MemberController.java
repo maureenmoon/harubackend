@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
@@ -93,5 +95,11 @@ public class MemberController {
     @GetMapping("/check-nickname")
     public ResponseEntity<Boolean> checkNicknameExists(@RequestParam("nickname") String nickname) {
         return ResponseEntity.ok(memberService.existsByNickname(nickname));
+    }
+
+    // 프로필 검색
+    @GetMapping("/search")
+    public ResponseEntity<List<MemberDto.Response>> searchMembers(@RequestParam("query") String query) {
+        return ResponseEntity.ok(memberService.searchMembers(query));
     }
 } 

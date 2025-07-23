@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 @Service
@@ -190,6 +191,10 @@ public class MemberService {
         return memberRepository.existsByNickname(nickname);
     }
 
+    public List<MemberDto.Response> searchMembers(String query) {
+        List<Member> members = memberRepository.findByNicknameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query);
+        return members.stream().map(MemberDto.Response::from).toList();
+    }
 
 
 }
