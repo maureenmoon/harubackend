@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,6 +25,8 @@ public class MealDto {
         private String imageUrl;
         private String memo;
         private List<FoodRequest> foods;
+        private LocalDateTime modifiedAt;
+        private Integer totalCalories;
     }
 
     @NoArgsConstructor
@@ -37,8 +40,9 @@ public class MealDto {
         private String imageUrl;
         private String memo;
         private List<FoodResponse> foods;
-        private LocalDateTime createdAt;
-        private LocalDateTime updatedAt;
+        private LocalDate createdAt;
+        private LocalDate updatedAt;
+        private LocalDateTime modifiedAt;
 
         public static Response from(Meal meal) {
             return Response.builder()
@@ -52,8 +56,9 @@ public class MealDto {
                                     .map(FoodResponse::from)
                                     .collect(Collectors.toList()) : 
                             new ArrayList<>())  // null-safe 처리
-                    .createdAt(meal.getCreatedAt())
-                    .updatedAt(meal.getUpdatedAt())
+                    .createdAt(meal.getCreatedAt() != null ? meal.getCreatedAt().toLocalDate() : null)
+                    .updatedAt(meal.getUpdatedAt() != null ? meal.getUpdatedAt().toLocalDate() : null)
+                    .modifiedAt(meal.getModifiedAt())
                     .build();
         }
     }

@@ -34,17 +34,25 @@ public class Meal {
     @Column(columnDefinition = "TEXT")
     private String memo;
 
+    @Column(name = "total_calories")
+    private Integer totalCalories;
+
     @OneToMany(mappedBy = "meal", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Food> foods = new ArrayList<>();
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime modifiedAt;
+    
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (modifiedAt == null) {
+            modifiedAt = createdAt.withSecond(0).withNano(0);
+        }
     }
 
     @PreUpdate
