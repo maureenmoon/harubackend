@@ -39,6 +39,8 @@ public class MealService {
                 .mealType(request.getMealType())
                 .imageUrl(request.getImageUrl())
                 .memo(request.getMemo())
+                .modifiedAt(request.getModifiedAt() != null ? request.getModifiedAt() : LocalDateTime.now().withSecond(0).withNano(0))
+                .totalCalories(request.getTotalCalories())
                 .build();
 
         Meal savedMeal = mealRepository.save(meal);
@@ -76,7 +78,17 @@ public class MealService {
     }
 
     public List<MealDto.Response> getAllMeals() {
-        return mealRepository.findAll().stream()
+        List<Meal> meals = mealRepository.findAllOrderByModifiedAtDesc();
+        System.out.println("Found " + meals.size() + " meals");
+        System.out.println("=== Sorted Meals ===");
+        for (Meal meal : meals) {
+            System.out.println("Meal ID: " + meal.getId() + 
+                             ", ModifiedAt: " + meal.getModifiedAt() + 
+                             ", CreatedAt: " + meal.getCreatedAt() + 
+                             ", MealType: " + meal.getMealType());
+        }
+        System.out.println("=== End Sorted Meals ===");
+        return meals.stream()
                 .map(MealDto.Response::from)
                 .collect(Collectors.toList());
     }
@@ -86,7 +98,12 @@ public class MealService {
         memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
 
-        return mealRepository.findByMemberId(memberId).stream()
+        List<Meal> meals = mealRepository.findByMemberIdOrderByModifiedAtDescQuery(memberId);
+        System.out.println("Found " + meals.size() + " meals for member " + memberId);
+        for (Meal meal : meals) {
+            System.out.println("Meal ID: " + meal.getId() + ", ModifiedAt: " + meal.getModifiedAt());
+        }
+        return meals.stream()
                 .map(MealDto.Response::from)
                 .collect(Collectors.toList());
     }
@@ -96,36 +113,20 @@ public class MealService {
         Meal meal = mealRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "식사 기록을 찾을 수 없습니다."));
 
-        // 1. 기존 foods 모두 삭제
-        meal.getFoods().clear();
-        foodRepository.deleteAllByMealId(meal.getId()); // FoodRepository에 해당 메서드 필요
+        // Meal 정보 업데이트
+        Meal updatedMeal = Meal.builder()
+                .id(meal.getId())
+                .member(meal.getMember())
+                .mealType(request.getMealType())
+                .imageUrl(request.getImageUrl())
+                .memo(request.getMemo())
+                .foods(meal.getFoods())  // 기존 음식 리스트 유지
+                .createdAt(meal.getCreatedAt())
+                .updatedAt(LocalDateTime.now())
+                .modifiedAt(request.getModifiedAt() != null ? request.getModifiedAt() : LocalDateTime.now())
+                .build();
 
-        // 2. 요청의 foods로 새 Food 리스트 생성 및 할당
-        List<Food> newFoods = new ArrayList<>();
-        if (request.getFoods() != null) {
-            for (MealDto.FoodRequest foodReq : request.getFoods()) {
-                Food food = Food.builder()
-                        .foodName(foodReq.getFoodName())
-                        .calories(foodReq.getCalories())
-                        .carbohydrate(foodReq.getCarbohydrate())
-                        .protein(foodReq.getProtein())
-                        .fat(foodReq.getFat())
-                        .sodium(foodReq.getSodium())
-                        .fiber(foodReq.getFiber())
-                        .meal(meal)
-                        .build();
-                newFoods.add(food);
-            }
-        }
-        meal.getFoods().addAll(newFoods);
-
-        // 3. Meal의 나머지 필드 업데이트
-        meal.setMealType(request.getMealType());
-        meal.setImageUrl(request.getImageUrl());
-        meal.setMemo(request.getMemo());
-        meal.setUpdatedAt(request.getUpdatedAt() != null ? request.getUpdatedAt().atStartOfDay() : LocalDate.now().atStartOfDay());
-
-        Meal savedMeal = mealRepository.save(meal);
+        Meal savedMeal = mealRepository.save(updatedMeal);
         return MealDto.Response.from(savedMeal);
     }
 
@@ -143,7 +144,7 @@ public class MealService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "회원을 찾을 수 없습니다."));
 
         // TODO: Repository에 findByMemberIdAndMealType 메서드 추가 필요
-        return mealRepository.findByMemberId(memberId).stream()
+        return mealRepository.findByMemberIdOrderByModifiedAtDescQuery(memberId).stream()
                 .filter(meal -> meal.getMealType() == mealType)
                 .map(MealDto.Response::from)
                 .collect(Collectors.toList());
@@ -168,14 +169,20 @@ public class MealService {
         mealRepository.save(updatedMeal);
     }
 
-    public List<MealDto.Response> getMealsByUpdatedDate(LocalDate date) {
+    public List<MealDto.Response> getMealsByModifiedDate(LocalDate date) {
         LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = date.plusDays(1).atStartOfDay().minusNanos(1);
-        return mealRepository.findAll().stream()
-                .filter(meal -> {
-                    LocalDateTime updatedAt = meal.getUpdatedAt();
-                    return updatedAt != null && !updatedAt.isBefore(start) && !updatedAt.isAfter(end);
-                })
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+        return mealRepository.findByModifiedAtBetween(start, end)
+                .stream()
+                .map(MealDto.Response::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<MealDto.Response> getMealsByMemberIdAndModifiedDate(Long memberId, LocalDate date) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+        return mealRepository.findByMemberIdAndModifiedAtBetween(memberId, start, end)
+                .stream()
                 .map(MealDto.Response::from)
                 .collect(Collectors.toList());
     }

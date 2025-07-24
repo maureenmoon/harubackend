@@ -5,9 +5,13 @@ import com.study.spring.domain.meal.entity.Meal;
 import com.study.spring.domain.meal.entity.MealType;
 import com.study.spring.domain.meal.service.MealService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -53,11 +57,31 @@ public class MealController {
     }
 
     // updatedAt 날짜로 식사 기록 조회
-    @GetMapping("/updated-date")
-    public ResponseEntity<List<MealDto.Response>> getMealsByUpdatedDate(@RequestParam("date") String dateStr) {
+    @GetMapping("/modified-date")
+    public ResponseEntity<List<MealDto.Response>> getMealsByModifiedDate(@RequestParam("date") String dateStr) {
         LocalDate date = LocalDate.parse(dateStr);
-        return ResponseEntity.ok(mealService.getMealsByUpdatedDate(date));
+        return ResponseEntity.ok(mealService.getMealsByModifiedDate(date));
     }
+
+    // 회원별 + modifiedAt 날짜로 식사 기록 조회
+    @GetMapping("/modified-date/member/{memberId}")
+    public ResponseEntity<?> getMealsByMemberIdAndModifiedDate(@PathVariable("memberId") Long memberId, @RequestParam("date") String dateStr) {
+        LocalDate date = LocalDate.parse(dateStr);
+        List<MealDto.Response> result = mealService.getMealsByMemberIdAndModifiedDate(memberId, date);
+        if (result.isEmpty()) {
+            return ResponseEntity.ok(Collections.singletonMap("message", "nodata"));
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    // modifiedAt(문자열)로 식사 기록 조회
+    // @GetMapping("/modified-date")
+    // public ResponseEntity<List<MealDto.Response>> getMealsByModifiedAt(@RequestParam("modifiedAt") String modifiedAt) {
+    //     // MealService에 getMealsByModifiedAt(String) 메서드가 없다는 오류가 발생하므로, 
+    //     // 올바른 메서드명을 사용하거나 MealService에 해당 메서드가 구현되어 있는지 확인해야 합니다.
+    //     // 예시로, getMealsByModifiedAt이 아니라 getMealsByModifiedDate(String)일 수 있으니 아래와 같이 수정합니다.
+    //     return ResponseEntity.ok(mealService.getMealsByModifiedAt(modifiedAt));
+    // }
 
     // 식사 기록 수정
     @PutMapping("/{id}")
@@ -68,14 +92,23 @@ public class MealController {
     }
 
     // 식사 이미지만 수정
-    @PatchMapping("/{id}/image")
-    public ResponseEntity<Void> updateMealImage(
-            @PathVariable("id") Long id,
-            @RequestBody Map<String, String> body) {
-        String imageUrl = body.get("imageUrl");
-        mealService.updateMealImage(id, imageUrl);
-        return ResponseEntity.noContent().build();
-    }
+    // @PatchMapping("/{id}/image")
+    // public ResponseEntity<Void> updateMealImage(
+    //         @PathVariable("id") Long id,
+    //         @RequestBody Map<String, String> body) {
+    //     String imageUrl = body.get("imageUrl");
+    //     mealService.updateMealImage(id, imageUrl);
+    //     return ResponseEntity.noContent().build();
+    // }
+
+    // 식사 이미지 업로드
+    // @PatchMapping(value = "/{id}/image-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    // public ResponseEntity<Void> uploadMealImage(
+    //         @PathVariable("id") Long id,
+    //         @RequestPart("image") org.springframework.web.multipart.MultipartFile imageFile) {
+    //     mealService.uploadMealImage(id, imageFile);
+    //     return ResponseEntity.noContent().build();
+    // }
 
     // 식사 기록 삭제
     @DeleteMapping("/{id}")
